@@ -23,6 +23,7 @@ export function parse(data: string, config: Config = {}): Result {
     let refs: string[] = [];
 
     let outText: string = data
+    let domainURL: string = "https://imslp.org/wiki/";
 
     for (let l = 0, last = ''; l < MAX_RECURSION; l++) {
         if (last === outText) break; last = outText;
@@ -205,8 +206,20 @@ export function parse(data: string, config: Config = {}): Result {
             .replace(re(r`^ (=+) \s* (.+?) \s* \1 \s* $`), (_, lvl, txt) => `<h${lvl.length} id="${encodeURI(txt.replace(/ /g, '_'))}">${txt}</h${lvl.length}>`)
 
             // Internal links: [[Page]] and [[Page|Text]]
-            .replace(re(r`\[\[ ([^\]|]+?) \]\]`), `<a class="internal-link" title="$1" href="$1">$1</a>`)
-            .replace(re(r`\[\[ ([^\]|]+?) \| ([^\]]+?) \]\]`), `<a class="internal-link" title="$1" href="/$1">$2</a>`)
+            .replace(re(r`\[\[ ([^\]|]+?) \]\]`), (_, title) => { 
+                var href = title.replaceAll(' ', '_'); 
+                return `<a class="internal-link" title="${title}" href="${domainURL}${href}">${title}</a>` 
+            })
+            .replace(re(r`\[\[ ([^\]|]+?) \| ([^\]]+?) \]\]`), (_, href, title) => { 
+                href = href.replaceAll(' ', '_'); 
+
+                if ( title == "Wikipedia" ) {
+                    href = href.replaceAll('wikipedia:', '');
+                    domainURL = "https://en.wikipedia.org/wiki/";
+                }
+
+                return `<a class="internal-link" title="${title}" href="${domainURL}${href}">${title}</a>` 
+            })
             .replace(re(r`(</a>)([a-z]+)`), '$2$1')
 
             // External links: [href Page] and just [href]
